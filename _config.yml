@@ -1,94 +1,29 @@
-# Welcome to Jekyll!
-#
-# This config file is meant for settings that affect your whole blog, values
-# which you are expected to set up once and rarely need to edit after that.
-# For technical reasons, this file is *NOT* reloaded automatically when you use
-# 'jekyll serve'. If you change this file, please restart the server process.
-
 # Site settings
-title: Hello,Welcom to my blog! # ex. I m Chuan
-name: hunterzju # ex. DONGChuan
-email: hunter_ht@zju.edu.cn
-location: My location # ex. Nice, France
-company: ZJU
-company_url: http://www.isee.zju.edu.cn/
-github_url: https://github.com/hunterzju # ex. https://github.com/DONGChuan
-github_username: hunterzju# ex. DONGChuan
-description: description_of_your_web_site
-favicon: favicon.png # Image must be in assets/images
-repository: github_username/github_username.github.io # ex. DONGChuan/DONGChuan.github.io
+title: Daktilo
+description: >
+  Write an awesome description for your new site here. You can edit this
+  line in _config.yml. It will appear in your document head meta (for
+  Google search results) and in your feed.xml site description.
 
-# The base hostname & protocol for your site
-# For local test, please use http://localhost:4000
-# For production, use your github page url. ex. http://dongchuan.github.io
-url: https://hunterzju.github.io/
+baseurl: "/blog/" # the subpath of your site, e.g. /blog/
+url: "http://hunterzju.github.io" # the base hostname & protocol for your site
 
-## Gem
-gems:
-  - jekyll-paginate
-  - jekyll-geo-pattern
-  - rouge
-  - kramdown
-  - jekyll-github-metadata
+author:
+  fullname: hunterzju
+  googleplus: https://www.google.com/+hunterzju
+  github: hunterzju
+  twitter: None
+  # disqus: your_disqus_forum_shortname
+
+# google_analytics: 'UA-XXXXXXXX-X'
+
+# Syntax highlighting
+highlightstyle: ''
+styles: [agate, androidstudio, arta, asceti, atelier-cave.dark, atelier-cave.light, atelier-dune.dark, atelier-dune.light, atelier-estuary.dark, atelier-estuary.light, atelier-forest.dark, atelier-forest.light, atelier-heath.dark, atelier-heath.light, atelier-lakeside.dark, atelier-lakeside.light, atelier-plateau.dark, atelier-plateau.light, atelier-savanna.dark, atelier-savanna.light, atelier-seaside.dark, atelier-seaside.light, atelier-sulphurpool.dark, atelier-sulphurpool.light, brown_paper, codepen-embed, color-brewer, dark, darkula, default, docco, far, foundation, github, github-gist, googlecode, grayscale, hopscotch, hybrid, idea, ir_black, kimbie.dark, kimbie.light, magula, mono-blue, monokai, monokai_sublime, obsidian, paraiso.dark, paraiso.light, pojoaque, railscast, rainbow, school_book, solarized_dark, solarized_light, styles_list.txt, sunburst, tomorrow, tomorrow-night-blue, tomorrow-night-bright, tomorrow-night, tomorrow-night-eightie, v, xcode, zenburn]
+
+# Handling Reading
+exclude: ["README.md", "README.html"]
 
 # Build settings
+highlighter: null
 markdown: kramdown
-highlighter: rouge
-lsi:         false
-excerpt_separator: "\n\n"
-
-source:      .
-destination: ./_site
-
-quiet:    false
-defaults: []
-
-kramdown:
-  input: GFM
-  enable_coderay: true
-
-# Disque
-disque: my_disque_settings # ex. httpdongchuangithubio.disqus.com
-
-# Pagination
-paginate: 10
-paginate_path: 'page:num'
-
-# Navigation. If you do not like these modules, just remove them :D
-navs:
-  -
-    href: /
-    label: Home
-
-  -
-    href: /open-source
-    label: Open-Source
-
-  -
-    href: /blog
-    label: Blog
-
-  -
-    href: /bookmark
-    label: Bookmark
-
-  -
-    href: /about
-    label: About
-
-# Sidebar to show popular repo
-side_bar_repo_limit: 5 # Number of repos to show
-
-# Google Analytics
-analytics :
-  provider : google
-  google :
-      tracking_id : 'tracking_id'  # ex. UA-72165600-X
-
-
-# For about.html. Fell free to create your own!
-skill_software_keywords: [Java, C, C++, Qt, Python, MySQL, Oracle, SQLite, PL/SQL, Design Patterns]
-skill_j2ee_keywords: [Spring, Struct, Hibernet, MyBatis, JSP]
-skill_web_keywords: [HTML, CSS, JS, JQuery, Ajax, AngularJS, NodeJS, ExpressJS, MongoDB, Redis, PHP, Symfony, Boostrap]
-skill_mobile_app_keywords: [Android, Sketch UI Desgin]
-
