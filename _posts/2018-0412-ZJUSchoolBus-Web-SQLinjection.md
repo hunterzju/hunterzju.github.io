@@ -48,7 +48,7 @@ sqlmap -u"http://10.214.xxx.xxx:xxxx/?questionid=1" -D aaa_web2 -T flag_is_here 
 ```
 flag的值就被成功找到了！
 题目中提示还有一个加分项，现在还没搞定。  
->Q: 有加分项吗?
+>Q: 有加分项吗?  
 A: 有, 本题限制了sqlmap的UNION注入
   判断questionid中是否出现了" union "(注意旁边的两个空格), 如果有, 则停止继续执行
   如果你能绕过这个限制, 能加分。 提示: 使用sqlmap的tamper
