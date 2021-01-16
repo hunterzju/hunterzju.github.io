@@ -84,7 +84,7 @@ print(parChecker('((()))'))
 print(parChecker('(()'))
 ```
 
-有时候会出现 '[]'和'{}'两种括号，下面代码实现了判断多种括号混合是否平衡地代码：
+有时候会出现\'[]\'和\'{}\'两种括号，下面代码实现了判断多种括号混合是否平衡地代码：
 
 ```python
 from pythonds.basic.stack import Stack
