@@ -116,7 +116,7 @@ def matches(open,close):
     return opens.index(open) == closers.index(close)
 
 
-print(parChecker('{{([][])}()}'))
+print(parChecker('{([][])}()}'))
 print(parChecker('[{()]'))
 
 ```
