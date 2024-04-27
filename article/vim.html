@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+<link rel="stylesheet" href="/_assets/main.css" />
+
+    <title>vim容器 - hunter_notes</title>
+  <link rel="stylesheet" href="/_markdown_plugin_assets/highlight.js/atom-one-light.css" /></head>
+  <body>
+    <div class="main">
+      <nav class="navigation">
+        <a href="/">hunter_notes</a>
+      </nav>
+      <article>
+        <header>
+          <h1 class="article-title">vim容器</h1>
+          <div class="article-info">
+            <div>
+              <span
+                >Created At：<time datetime="1714228217829"
+                  >2024-04-27 22:30</time
+                ></span
+              >
+              <span
+                >Updated At：<time datetime="1714230534985"
+                  >2024-04-27 23:08</time
+                ></span
+              >
+            </div>
+            
+            <div>
+              Keywords: 
+              <span class="keyword">###</span>
+              
+            </div>
+            
+          </div>
+        </header>
+        <div class="article-content markdown-body"><p>工欲善其事，必先利其器，好用的编辑器对于程序员来说至关重要。VIM是一款入门门槛略高，但是熟练以后让人爱不释手的编辑器。而且在Linux开发环境下，vim编辑器是极其容易获取的。此外，熟练使用VIM会给人很专业的感觉（装X神器）。</p>
+<h2 id="背景">背景</h2>
+<p>然而，用好VIM并不是一件容易的事。好用的VIM离不开各种插件以及配置。这些插件安装起来有时候并不那么友好，比如在不同Linux发行版Centos和Ubuntu中搭建，还是要踩点坑的。虽然有现成的vimrc文件，但是每次迁移开发环境，还是要安装不少插件的依赖应用，并不是那么友好。因此就想将vim开发环境打包到docker容器中，免去安装依赖的烦恼。</p>
+<h2 id="实现">实现</h2>
+<p>基于开源项目，略微修改了一下，将vim打包到了容器镜像中：<a title="https://github.com/hunterzju/docker-vim" href="https://github.com/hunterzju/docker-vim">docker-vim</a>.</p>
+<p>使用说明：</p>
+<ol>
+<li>拉取github仓库：<code>https://github.com/hunterzju/docker-vim.git</code></li>
+<li>构建docker镜像：<code>cd docker-vim &amp;&amp; make build-vim &amp;&amp; make install</code></li>
+<li>在对应项目中使用：<code>cd $path_to_project &amp;&amp; dvim</code></li>
+</ol>
+<p>每次执行dvim会拉起一个docker容器并进入shell，当前目录会被挂载在docker容器中的<code>/home/workspace</code>目录</p>
+<p>容器中包含了vim的简单配置：</p>
+<h3 id="vim_runtime">vim_runtime</h3>
+<p>使用<a title="https://github.com/amix/vimrc" href="https://github.com/amix/vimrc">vim_runtime</a>来管理配置，该项目也是开源项目，里面自带了一些常用插件。详情可以参考对应项目主页。</p>
+<p>在<code>vim_runtime</code>环境中，定制化的vim配置放在<code>/home/user/.vim_runtime/my_configs.vim</code>文件中。自己习惯的键位映射，插件的配置都放在这里。</p>
+<h3 id="vim_plugs">vim_plugs</h3>
+<p><a title="https://github.com/junegunn/vim-plug" href="https://github.com/junegunn/vim-plug">vim-plug</a>是一个非常方便的vim插件管理工具。需要添加插件时，只要在<code>my_configs.vim</code>文件中加入对应的插件路径，然后在vim中执行<code>PlugInstall</code>就可以了。比如如下插件：</p>
+<div><pre class="hljs"><code>call plug<span class="hljs-function"><span class="hljs-keyword">#</span><span class="hljs-title">begin</span><span class="hljs-params">(<span class="hljs-string">"~/.vim_runtime/my_plugins/"</span>)</span></span>
+ Plug 'junegunn/fzf', { 'do': { -&gt; fzf<span class="hljs-function"><span class="hljs-keyword">#</span><span class="hljs-title">install</span><span class="hljs-params">()</span></span> } }
+ Plug 'Yggdroot/LeaderF', { 'do': ':LeaderfInstallCExtension' }
+call plug<span class="hljs-function"><span class="hljs-keyword">#</span><span class="hljs-title">end</span><span class="hljs-params">()</span></span>
+</code></pre></div>
+<h3 id="vim插件">vim插件</h3>
+<p>容器内vim包含一些常用的vim插件：</p>
+<h4 id="nerdtree">NerdTree</h4>
+<p>文件浏览插件</p>
+<h4 id="fzf">FZF</h4>
+<p>文件模糊匹配插件</p>
+<h4 id="leaderf">Leaderf</h4>
+<p>关键词模糊配置插件</p>
+</div>
+      </article>
+    </div>
+  </body>
+</html>
