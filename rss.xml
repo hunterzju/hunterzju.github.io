@@ -4,7 +4,7 @@
         <title></title>
         <link>undefined</link>
         <description>undefined</description>
-        <lastBuildDate>Sat, 27 Apr 2024 15:12:17 GMT</lastBuildDate>
+        <lastBuildDate>Tue, 14 May 2024 15:20:42 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>Joplin Pages Publisher</generator>
         <item>
@@ -557,6 +557,124 @@ lmhlo.dynamic_reshape(<span class="hljs-variable">%in</span><span class="hljs-pu
    <span class="hljs-variable">%packedArgRets</span> <span class="hljs-operator">=</span> ...
    llvm.<span class="hljs-keyword">call</span> <span class="hljs-title">@disc_ral_call</span>(<span class="hljs-variable">%ctx</span><span class="hljs-punctuation">,</span> <span class="hljs-variable">%name</span><span class="hljs-punctuation">,</span> <span class="hljs-variable">%packedArgRets</span>) : (<span class="hljs-title">!llvm.ptr</span>&lt;<span class="hljs-type">i8</span>&gt;<span class="hljs-punctuation">,</span> <span class="hljs-title">!llvm.ptr</span>&lt;<span class="hljs-type">i8</span>&gt;<span class="hljs-punctuation">,</span> <span class="hljs-title">!llvm.ptr</span>&lt;ptr&lt;<span class="hljs-type">i8</span>&gt;&gt;) -&gt; ()</code></pre></div>
 <p>After this phase, the LLVM Dialect will then be converted to LLVM IR, and sent to LLVM backend. By this step, we've got a binary, which is executable and will link different runtime libraries for different scenarios.</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[TransformerModel-基于minGPT理解]]></title>
+            <guid>6d041a270e7549aa8fbfe53d2adede3f</guid>
+            <pubDate>Wed, 27 Mar 2024 15:32:56 GMT</pubDate>
+            <content:encoded><![CDATA[<p>minGPT是一个用pytorch实现的结构简单的GPT模型，更加容易理解和学习：<a title="https://github.com/karpathy/minGPT" href="https://github.com/karpathy/minGPT">GitHub - karpathy/minGPT: A minimal PyTorch re-implementation of the OpenAI GPT (Generative Pretrained Transformer) training</a>。</p>
+<h2 id="gpt模型">GPT模型</h2>
+<p>minGPT项目中实现了多种GPT模型（包括GPT2的多个版本），其中结构最简单的是<code>nanoGPT</code>。</p>
+<p>Transformer论文中，模型结构分为编码器和解码器（下图左侧为编码器，右侧为解码器）；编码器和解码器中有N个结构相似的Block，很多代码实现中称为GLMBlock；GLMBlock中核心结构是Multi-Head的SelfAttention机制。此外，Transformer模型并不一定要同时具有编码器和解码器，二者可以独立使用。GPT模型中主要使用解码器。</p>
+<p><img src="/_resources/b0de2a7175454f4fafd5cabdd202fe17.png" /></p>
+<p>nanoGPT是一个结构非常简单的GPT模型，意味着它具备了GPT模型的所有要素，但是尽量简化了其中的参数。<a title="https://bbycroft.net/llm" href="https://bbycroft.net/llm">该网站</a>对nanoGPT模型做了非常详尽的可视化解释。</p>
+<h2 id="nanogpt-字符排序">nanoGPT - 字符排序</h2>
+<p>下文以minGPT仓库中的demo模型为例分析一个简单Transeformer模型的运算过程。该demo模型实现了简单的字符串排序，字符串输入范围为A-C，最大长度11。</p>
+<p>这里以输入序列为：<code>CBABBC</code>进行分析。</p>
+<p>gpt模型的参数如下：</p>
+<div><pre class="hljs"><code><span class="hljs-string">'gpt-nano'</span>:     <span class="hljs-built_in">dict</span>(n_layer=<span class="hljs-number">3</span>, n_head=<span class="hljs-number">3</span>, n_embd=<span class="hljs-number">48</span>)</code></pre></div>
+<h4 id="token映射">Token映射</h4>
+<p>通过Map查找表，根据简单映射关系<code>A - 0, B - 1, C -2</code>，将Token映射为数字<code>210112</code>。</p>
+<h4 id="embedding">Embedding</h4>
+<p>Embedding过程是将输入的Token序列转换为特征矩阵的过程，包括token嵌入和位置编码嵌入，分别对应两个矩阵作为查找表：</p>
+<ul>
+<li>token embedding matrix：词嵌入矩阵，矩阵尺寸为 - 词汇表 x 特征维度(channel)</li>
+<li>position embedding matrix：位置编码矩阵，矩阵尺寸为 - 可接受最大输入长度 x 特征维度(channel)</li>
+</ul>
+<p>在pytorch中实现使用<code>torch.nn.Embedding</code>实现：</p>
+<div><pre class="hljs"><code>wte = nn.Embedding(config.vocab_size, config.n_embd)                                                                                                   
+wpe = nn.Embedding(config.block_size, config.n_embd)</code></pre></div>
+<p>其中，词嵌入算子<code>wte</code>中<code>config.vocab_size</code>代表模型所能识别单词表的维度，在字符串排序的nanoGPT模型（下文简称demo模型）中，词表中只有A-C，对应参数为3（下图中矩阵维度n_vocab）；<code>config.n_embed</code>代表词嵌入矩阵的特征维度，在demo模型中u对应值为48（下图中矩阵维度C）。</p>
+<p><img src="/_resources/45c34de22d7044bb9c3d4b200b71fe83.png" /></p>
+<p>位置编码算子<code>wpe</code>中<code>config.block_size</code>代表模型所能接收的最大输入长度，demo模型中对应值为<code>2 * input_len - 1 = 11</code>（下图中矩阵维度T）。</p>
+<p><img src="/_resources/e4c65fad9fa845759bf59ac695992b89.png" /></p>
+<p>上述两个矩阵的值都是在训练过程中生成的，推理过程中作为权重使用。</p>
+<p>Embedding层的计算过程就是根据输入token的index和位置，将两个矩阵中的对应列相加：在demo模型中t=3时刻输入token为B，对应Token Embed矩阵中第1列（下标从0开始），对应Position Embed矩阵中第3列（下标从0开始），两列相加作为词嵌入的结果<code>input embedding</code>，用于后续处理。</p>
+<p><img src="/_resources/baf79c3b862f45329e099efeb96504fa.png" /></p>
+<h4 id="layernormal">LayerNormal</h4>
+<p>归一化层（LayerNormal）是对矩阵中没一列进行单独的归一化处理，具体就是将一列数据构造为均值为0,标准差为1的向量，其目的是保证模型训练过程中的稳定性。</p>
+<p>其在pytoch中实现使用<code>torch.nn.LayerNorm</code>：</p>
+<div><pre class="hljs"><code>ln_f = nn.LayerNorm(config.n_embd)</code></pre></div>
+<p>其中主要参数是词嵌入矩阵的特征维度<code>config.n_embed</code>，demo模型中对应值为48。</p>
+<p>具体LayerNormalize过程如下图所示：<br />
+<img src="/_resources/2124815168c145a290e2fb7684d96adb.png" /></p>
+<h4 id="selfattention">SelfAttention</h4>
+<p>注意力机制是Transformer模型的核心，GPT模型中一般有多个Head，下文主要关注单个Head的执行过程。</p>
+<h5 id="q-k-v-vector计算">Q、K、V vector计算</h5>
+<p>注意力机制的第一步是根据NormalizedInputEmbedding生成三个向量：</p>
+<ul>
+<li>Q: Query vector</li>
+<li>K: Key vector</li>
+<li>V: Value vector</li>
+</ul>
+<p>对应的python代码：</p>
+<div><pre class="hljs"><code><span class="hljs-comment">## 初始化</span>
+<span class="hljs-comment"># key, query, value projections for all heads, but in a batch</span>
+self.c_attn = nn.Linear(config.n_embd, <span class="hljs-number">3</span> * config.n_embd)
+
+<span class="hljs-comment">## 推理</span>
+<span class="hljs-comment"># calculate query, key, values for all heads in batch and move head forward to be the batch dim</span>
+q, k ,v  = self.c_attn(x).split(self.n_embd, dim=<span class="hljs-number">2</span>) </code></pre></div>
+<p>Q、K、V向量计算如下图所示：<br />
+<img src="/_resources/76dea313b7d7426590fe1a5a81cbddf8.png" /></p>
+<ul>
+<li class="md-checkbox joplin-checkbox"><div class="checkbox-wrapper"><input type="checkbox" id="md-checkbox-0" checked="checked" /><label id="cb-label-md-checkbox-0" for="md-checkbox-0" class="checkbox-label-checked">@TODO: Q,K,V矩阵的列参数如何确定？</label></div></li>
+</ul>
+<p>NormalizedInputEmbedding矩阵分别和Q、K、V对应的权重矩阵相乘，生成对应的Q，K，V向量。在Pytorch中Q、K、V权重矩阵被合并到了一个线性层（self.c_atten）;此外，MutiHead的权重也被合并在了一起。上图中仅表示一个Head的计算，因此，权重矩阵（Q、K、V Weights）中行维度（A）为词嵌入矩阵的特征C/nHead（demo模型中对应48 / 3 = 16）。对应的权重矩阵也是在训练过程中通过反向传播得到，在推理过程中直接使用。</p>
+<h5 id="自注意力机制">自注意力机制</h5>
+<p>SelfAttention的核心逻辑是让输入尽可能感知到之前的输入，其过程类似于查表：</p>
+<p><img src="/_resources/03656ee03f834bbf9f04cada965da6ba.png" /></p>
+<ol>
+<li>将t=N时刻的Q向量与所有之前时刻的K向量做点积（计算相似度），将计算结果存入AttentionMatrix的第N行中;</li>
+<li>AttentionMatrix做SoftMax归一化处理;</li>
+<li>将AttentionMatrixNorm矩阵中第N行作为权重，计算Value Vector中各列的加权和，作为最终输出的第N列。</li>
+</ol>
+<p>对应的python代码：</p>
+<div><pre class="hljs"><code><span class="hljs-comment"># 初始化</span>
+<span class="hljs-comment"># causal mask to ensure that attention is only applied to the left in the input sequence </span>
+self.register_buffer(<span class="hljs-string">"bias"</span>, torch.tril(torch.ones(config.block_size, config.block_size)).view(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, config.block_size, config.block_size))
+
+<span class="hljs-comment"># 推理</span>
+<span class="hljs-comment"># causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -&gt; (B, nh, T, T)</span>
+att = (q @ k.transpose(-<span class="hljs-number">2</span>, -<span class="hljs-number">1</span>)) * (<span class="hljs-number">1.0</span> / math.sqrt(k.size(-<span class="hljs-number">1</span>)))                                                                                         att = att.masked_fill(self.bias[:,:,:T,:T] == <span class="hljs-number">0</span>, <span class="hljs-built_in">float</span>(<span class="hljs-string">'-inf'</span>))                                                                                         att = F.softmax(att, dim=-<span class="hljs-number">1</span>)                                                                                                                             att = self.attn_dropout(att) 
+y = att @ v <span class="hljs-comment"># (B, nh, T, T) x (B, nh, T, hs) -&gt; (B, nh, T, hs)</span>
+y = y.transpose(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>).contiguous().view(B, T, C) <span class="hljs-comment"># re-assemble all head outputs side by side</span></code></pre></div>
+<p>代码实现中，attention矩阵初始化为一个下三角矩阵（<code>self.bias</code>），以保证attention计算时只保留到T时刻之前的结果。此外，代码中还加入了dropout层剪枝，避免过拟合。</p>
+<p>最终MultiHead的输出结果堆叠起来，还原为原特征维度：nh x hs -&gt; C (对应demo中为3 x 16 = 48)。</p>
+<h4 id="projection">Projection</h4>
+<p>projection就是一个线性层，增加模型的映射能力，输入输出维度相同，都是Token的特征维度。</p>
+<p>对应python代码：</p>
+<div><pre class="hljs"><code><span class="hljs-comment"># output projection</span>
+y = self.resid_dropout(self.c_proj(y))</code></pre></div>
+<p>Projection之后使用了残差层将输入和输出连接。</p>
+<h4 id="mlp">MLP</h4>
+<p>MLP层就是经典的神经网络层，激活函数使用GELU。</p>
+<div><pre class="hljs"><code>self.mlp = nn.ModuleDict(<span class="hljs-built_in">dict</span>(
+             c_fc    = nn.Linear(config.n_embd, <span class="hljs-number">4</span> * config.n_embd),
+             c_proj  = nn.Linear(<span class="hljs-number">4</span> * config.n_embd, config.n_embd),
+             act     = NewGELU(),                         
+             dropout = nn.Dropout(config.resid_pdrop)))
+
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">GELU</span>(<span class="hljs-params">self, x</span>):
+         <span class="hljs-keyword">return</span> <span class="hljs-number">0.5</span> * x * (<span class="hljs-number">1.0</span> + torch.tanh(math.sqrt(<span class="hljs-number">2.0</span> / math.pi) * (x + <span class="hljs-number">0.044715</span> * torch.<span class="hljs-built_in">pow</span>(x, <span class="hljs-number">3.0</span>))))</code></pre></div>
+<p>激活函数：<br />
+<img src="/_resources/978aabbfcc0d40ea9e9f07e48231d241.png" /></p>
+<p>mlp层最后的输出也采用了残差连接的方式。</p>
+<h4 id="transformer">Transformer</h4>
+<p>以上内容构成了Transformer模型的单个Block层，通常多个Block层连接构成具备一定功能的模型。</p>
+<p><img src="/_resources/56bc35654383417c87db19349ec1eefa.png" /></p>
+<h4 id="softmax">Softmax</h4>
+<p>softmax实际上是对输入数据取指数，然后进行归一化，计算公式如下：<br />
+<img src="/_resources/9f279576dc3b42539d14f416bc31bee9.png" /></p>
+<h4 id="output">Output</h4>
+<p>最终输出是通过一个线性层，将输入从特征维度向量（C）映射回词表对应的维度（n_vocab），表示输出对应词汇的概率，选择概率最高的输出。</p>
+<p>对应python代码：</p>
+<div><pre class="hljs"><code><span class="hljs-comment"># 初始化</span>
+self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=<span class="hljs-literal">False</span>)
+
+<span class="hljs-comment"># 推理</span>
+logits = self.lm_head(x)</code></pre></div>
 ]]></content:encoded>
         </item>
     </channel>
