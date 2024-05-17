@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+<link rel="stylesheet" href="/_assets/main.css" />
+
+    <title>vim插件 - GitGutter - hunter_notes</title>
+  <link rel="stylesheet" href="/_markdown_plugin_assets/highlight.js/atom-one-light.css" /></head>
+  <body>
+    <div class="main">
+      <nav class="navigation">
+        <a href="/">hunter_notes</a>
+      </nav>
+      <article>
+        <header>
+          <h1 class="article-title">vim插件 - GitGutter</h1>
+          <div class="article-info">
+            <div>
+              <span
+                >Created At：<time datetime="1715787820331"
+                  >2024-05-15 23:43</time
+                ></span
+              >
+              <span
+                >Updated At：<time datetime="1715871278355"
+                  >2024-05-16 22:54</time
+                ></span
+              >
+            </div>
+            
+          </div>
+        </header>
+        <div class="article-content markdown-body"><p>vim - GitGutter插件：<a title="https://github.com/airblade/vim-gitgutter" href="https://github.com/airblade/vim-gitgutter">https://github.com/airblade/vim-gitgutter</a></p>
+<h2 id="配置项">配置项</h2>
+<p><code>let g:gitgutter_enabled = 1</code> - 自动开启gitgutter</p>
+<p><code>let g:gitgutter_preview_win_floating = 1</code> - 使用floating/popup窗口预览git改动</p>
+<p>美化显示效果：</p>
+<div><pre class="hljs"><code><span class="hljs-keyword">let</span> <span class="hljs-variable">g:gitgutter_set_sign_backgrounds</span> = <span class="hljs-number">1</span>
+<span class="hljs-comment">" vim-gitgutter used to do this by default:</span>
+highlight! link SignColumn LineNr
+<span class="hljs-keyword">highlight</span> GitGutterAdd    guifg=#<span class="hljs-number">009900</span> ctermfg=<span class="hljs-number">2</span>
+<span class="hljs-keyword">highlight</span> GitGutterChange guifg=#bbbb00 ctermfg=<span class="hljs-number">3</span>
+<span class="hljs-keyword">highlight</span> GitGutterDelete guifg=#ff2222 ctermfg=<span class="hljs-number">1</span></code></pre></div>
+<h2 id="快捷键">快捷键</h2>
+<ul>
+<li>
+<p>跳转到下一处改动 (change): <code>]c</code></p>
+</li>
+<li>
+<p>跳转到之前的改动 (change): <code>[c</code></p>
+</li>
+<li>
+<p>暂修改存stage the hunk with <code>&lt;Leader&gt;hs</code></p>
+</li>
+<li>
+<p>撤销修改undo it with <code>&lt;Leader&gt;hu</code></p>
+</li>
+<li>
+<p>预览修改preview the hunk, <code>&lt;Leader&gt;hp</code></p>
+</li>
+</ul>
+</div>
+      </article>
+    </div>
+  </body>
+</html>

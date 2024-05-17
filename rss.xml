@@ -4,9 +4,132 @@
         <title></title>
         <link>undefined</link>
         <description>undefined</description>
-        <lastBuildDate>Tue, 14 May 2024 15:20:42 GMT</lastBuildDate>
+        <lastBuildDate>Fri, 17 May 2024 14:47:56 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>Joplin Pages Publisher</generator>
+        <item>
+            <title><![CDATA[vim插件 - NerdCommenter]]></title>
+            <guid>3b7a22d99456436dadb4674426279e83</guid>
+            <pubDate>Thu, 16 May 2024 15:23:35 GMT</pubDate>
+            <content:encoded><![CDATA[<p>NerdCommenter: <a title="https://github.com/preservim/nerdcommenter" href="https://github.com/preservim/nerdcommenter">https://github.com/preservim/nerdcommenter</a></p>
+<h2 id="配置">配置</h2>
+<div><pre class="hljs"><code><span class="hljs-comment">" Create default mappings</span>
+<span class="hljs-keyword">let</span> <span class="hljs-variable">g:NERDCreateDefaultMappings</span> = <span class="hljs-number">1</span>
+
+<span class="hljs-comment">" Add spaces after comment delimiters by default</span>
+<span class="hljs-keyword">let</span> <span class="hljs-variable">g:NERDSpaceDelims</span> = <span class="hljs-number">1</span>
+
+<span class="hljs-comment">" Use compact syntax for prettified multi-line comments</span>
+<span class="hljs-keyword">let</span> <span class="hljs-variable">g:NERDCompactSexyComs</span> = <span class="hljs-number">1</span>
+
+<span class="hljs-comment">" Align line-wise comment delimiters flush left instead of following code indentation</span>
+<span class="hljs-keyword">let</span> <span class="hljs-variable">g:NERDDefaultAlign</span> = <span class="hljs-string">'left'</span>
+
+<span class="hljs-comment">" Set a language to use its alternate delimiters by default</span>
+<span class="hljs-keyword">let</span> <span class="hljs-variable">g:NERDAltDelims_java</span> = <span class="hljs-number">1</span>
+
+<span class="hljs-comment">" Add your own custom formats or override the defaults</span>
+<span class="hljs-keyword">let</span> <span class="hljs-variable">g:NERDCustomDelimiters</span> = { <span class="hljs-string">'c'</span>: { <span class="hljs-string">'left'</span>: <span class="hljs-string">'/**'</span>,<span class="hljs-string">'right'</span>: <span class="hljs-string">'*/'</span> } }
+
+<span class="hljs-comment">" Allow commenting and inverting empty lines (useful when commenting a region)</span>
+<span class="hljs-keyword">let</span> <span class="hljs-variable">g:NERDCommentEmptyLines</span> = <span class="hljs-number">1</span>
+
+<span class="hljs-comment">" Enable trimming of trailing whitespace when uncommenting</span>
+<span class="hljs-keyword">let</span> <span class="hljs-variable">g:NERDTrimTrailingWhitespace</span> = <span class="hljs-number">1</span>
+
+<span class="hljs-comment">" Enable NERDCommenterToggle to check all selected lines is commented or not </span>
+<span class="hljs-keyword">let</span> <span class="hljs-variable">g:NERDToggleCheckAllLines</span> = <span class="hljs-number">1</span></code></pre></div>
+<h2 id="快捷键">快捷键</h2>
+<div><pre class="hljs"><code>Most of the following mappings are <span class="hljs-keyword">for</span> <span class="hljs-keyword">normal</span>/<span class="hljs-keyword">visual</span> <span class="hljs-keyword">mode</span> <span class="hljs-keyword">only</span>. The |NERDCommenterInsert| mapping <span class="hljs-keyword">is</span> <span class="hljs-keyword">for</span> <span class="hljs-keyword">insert</span> <span class="hljs-keyword">mode</span> <span class="hljs-keyword">only</span>.
+
+[<span class="hljs-built_in">count</span>]<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">cc</span> |NERDCommenterComment|
+
+Comment out the current <span class="hljs-built_in">line</span> <span class="hljs-built_in">or</span> text selected in <span class="hljs-keyword">visual</span> <span class="hljs-keyword">mode</span>.
+
+[<span class="hljs-built_in">count</span>]<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">cn</span> |NERDCommenterNested|
+
+Same <span class="hljs-keyword">as</span> <span class="hljs-keyword">cc</span> but forces nesting.
+
+[<span class="hljs-built_in">count</span>]<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">c</span><span class="hljs-symbol">&lt;space&gt;</span> |NERDCommenterToggle|
+
+Toggles the comment state of the selected <span class="hljs-built_in">line</span>(s). If the topmost selected <span class="hljs-built_in">line</span> <span class="hljs-keyword">is</span> commented, <span class="hljs-keyword">all</span> selected lines are uncommented <span class="hljs-built_in">and</span> vice versa.
+
+[<span class="hljs-built_in">count</span>]<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">cm</span> |NERDCommenterMinimal|
+
+Comments the given lines using <span class="hljs-keyword">only</span> one <span class="hljs-keyword">set</span> of multipart delimiters.
+
+[<span class="hljs-built_in">count</span>]<span class="hljs-symbol">&lt;leader&gt;</span>ci |NERDCommenterInvert|
+
+Toggles the comment state of the selected <span class="hljs-built_in">line</span>(s) individually.
+
+[<span class="hljs-built_in">count</span>]<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">cs</span> |NERDCommenterSexy|
+
+Comments out the selected lines with <span class="hljs-keyword">a</span> pretty block formatted layout.
+
+[<span class="hljs-built_in">count</span>]<span class="hljs-symbol">&lt;leader&gt;</span>cy |NERDCommenterYank|
+
+Same <span class="hljs-keyword">as</span> <span class="hljs-keyword">cc</span> except that the commented <span class="hljs-built_in">line</span>(s) are yanked <span class="hljs-keyword">first</span>.
+
+<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">c</span>$ |NERDCommenterToEOL|
+
+Comments the current <span class="hljs-built_in">line</span> from the <span class="hljs-built_in">cursor</span> <span class="hljs-keyword">to</span> the end of <span class="hljs-built_in">line</span>.
+
+<span class="hljs-symbol">&lt;leader&gt;</span>cA |NERDCommenterAppend|
+
+Adds comment delimiters <span class="hljs-keyword">to</span> the end of <span class="hljs-built_in">line</span> <span class="hljs-built_in">and</span> goes into <span class="hljs-keyword">insert</span> <span class="hljs-keyword">mode</span> between them.
+
+|NERDCommenterInsert|
+
+Adds comment delimiters at the current <span class="hljs-built_in">cursor</span> position <span class="hljs-built_in">and</span> inserts between. Disabled by default.
+
+<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">ca</span> |NERDCommenterAltDelims|
+
+Switches <span class="hljs-keyword">to</span> the alternative <span class="hljs-keyword">set</span> of delimiters.
+
+[<span class="hljs-built_in">count</span>]<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">cl</span> |NERDCommenterAlignLeft [<span class="hljs-built_in">count</span>]<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">cb</span> |NERDCommenterAlignBoth
+
+Same <span class="hljs-keyword">as</span> |NERDCommenterComment| except that the delimiters are aligned down the <span class="hljs-keyword">left</span> side (<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">cl</span>) <span class="hljs-built_in">or</span> both sides (<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">cb</span>).
+
+[<span class="hljs-built_in">count</span>]<span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">cu</span> |NERDCommenterUncomment|
+
+Uncomments the selected <span class="hljs-built_in">line</span>(s).</code></pre></div>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[vim插件 - GitGutter]]></title>
+            <guid>8346638da9324b72b3abee6ce0971c7b</guid>
+            <pubDate>Wed, 15 May 2024 15:43:40 GMT</pubDate>
+            <content:encoded><![CDATA[<p>vim - GitGutter插件：<a title="https://github.com/airblade/vim-gitgutter" href="https://github.com/airblade/vim-gitgutter">https://github.com/airblade/vim-gitgutter</a></p>
+<h2 id="配置项">配置项</h2>
+<p><code>let g:gitgutter_enabled = 1</code> - 自动开启gitgutter</p>
+<p><code>let g:gitgutter_preview_win_floating = 1</code> - 使用floating/popup窗口预览git改动</p>
+<p>美化显示效果：</p>
+<div><pre class="hljs"><code><span class="hljs-keyword">let</span> <span class="hljs-variable">g:gitgutter_set_sign_backgrounds</span> = <span class="hljs-number">1</span>
+<span class="hljs-comment">" vim-gitgutter used to do this by default:</span>
+highlight! link SignColumn LineNr
+<span class="hljs-keyword">highlight</span> GitGutterAdd    guifg=#<span class="hljs-number">009900</span> ctermfg=<span class="hljs-number">2</span>
+<span class="hljs-keyword">highlight</span> GitGutterChange guifg=#bbbb00 ctermfg=<span class="hljs-number">3</span>
+<span class="hljs-keyword">highlight</span> GitGutterDelete guifg=#ff2222 ctermfg=<span class="hljs-number">1</span></code></pre></div>
+<h2 id="快捷键">快捷键</h2>
+<ul>
+<li>
+<p>跳转到下一处改动 (change): <code>]c</code></p>
+</li>
+<li>
+<p>跳转到之前的改动 (change): <code>[c</code></p>
+</li>
+<li>
+<p>暂修改存stage the hunk with <code>&lt;Leader&gt;hs</code></p>
+</li>
+<li>
+<p>撤销修改undo it with <code>&lt;Leader&gt;hu</code></p>
+</li>
+<li>
+<p>预览修改preview the hunk, <code>&lt;Leader&gt;hp</code></p>
+</li>
+</ul>
+]]></content:encoded>
+        </item>
         <item>
             <title><![CDATA[vim容器]]></title>
             <guid>0fe77d6d9bd54562966df3dc45c7b2fb</guid>
@@ -32,16 +155,15 @@
 <div><pre class="hljs"><code>call plug<span class="hljs-function"><span class="hljs-keyword">#</span><span class="hljs-title">begin</span><span class="hljs-params">(<span class="hljs-string">"~/.vim_runtime/my_plugins/"</span>)</span></span>
  Plug 'junegunn/fzf', { 'do': { -&gt; fzf<span class="hljs-function"><span class="hljs-keyword">#</span><span class="hljs-title">install</span><span class="hljs-params">()</span></span> } }
  Plug 'Yggdroot/LeaderF', { 'do': ':LeaderfInstallCExtension' }
-call plug<span class="hljs-function"><span class="hljs-keyword">#</span><span class="hljs-title">end</span><span class="hljs-params">()</span></span>
-</code></pre></div>
+call plug<span class="hljs-function"><span class="hljs-keyword">#</span><span class="hljs-title">end</span><span class="hljs-params">()</span></span></code></pre></div>
 <h3 id="vim插件">vim插件</h3>
 <p>容器内vim包含一些常用的vim插件：</p>
-<h4 id="nerdtree">NerdTree</h4>
-<p>文件浏览插件</p>
-<h4 id="fzf">FZF</h4>
-<p>文件模糊匹配插件</p>
-<h4 id="leaderf">Leaderf</h4>
-<p>关键词模糊配置插件</p>
+<ul>
+<li>NerdTree - 文件浏览插件</li>
+<li>FZF - 文件模糊匹配插件</li>
+<li>Leaderf - 关键词模糊配置插件</li>
+</ul>
+<p>另外就是vim_runtime里面自带的一些插件</p>
 ]]></content:encoded>
         </item>
         <item>
@@ -619,7 +741,7 @@ q, k ,v  = self.c_attn(x).split(self.n_embd, dim=<span class="hljs-number">2</sp
 <p>Q、K、V向量计算如下图所示：<br />
 <img src="/_resources/76dea313b7d7426590fe1a5a81cbddf8.png" /></p>
 <ul>
-<li class="md-checkbox joplin-checkbox"><div class="checkbox-wrapper"><input type="checkbox" id="md-checkbox-0" checked="checked" /><label id="cb-label-md-checkbox-0" for="md-checkbox-0" class="checkbox-label-checked">@TODO: Q,K,V矩阵的列参数如何确定？</label></div></li>
+<li class="md-checkbox joplin-checkbox"><div class="checkbox-wrapper"><input type="checkbox" id="md-checkbox-1" checked="checked" /><label id="cb-label-md-checkbox-1" for="md-checkbox-1" class="checkbox-label-checked">@TODO: Q,K,V矩阵的列参数如何确定？</label></div></li>
 </ul>
 <p>NormalizedInputEmbedding矩阵分别和Q、K、V对应的权重矩阵相乘，生成对应的Q，K，V向量。在Pytorch中Q、K、V权重矩阵被合并到了一个线性层（self.c_atten）;此外，MutiHead的权重也被合并在了一起。上图中仅表示一个Head的计算，因此，权重矩阵（Q、K、V Weights）中行维度（A）为词嵌入矩阵的特征C/nHead（demo模型中对应48 / 3 = 16）。对应的权重矩阵也是在训练过程中通过反向传播得到，在推理过程中直接使用。</p>
 <h5 id="自注意力机制">自注意力机制</h5>
