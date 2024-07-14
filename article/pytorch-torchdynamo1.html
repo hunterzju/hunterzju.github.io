@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+<link rel="stylesheet" href="/_assets/main.css" />
+
+    <title>深度学习框架 - pytorch-torchdynamo原理分析1 - hunter_notes</title>
+  <link rel="stylesheet" href="/_markdown_plugin_assets/highlight.js/atom-one-light.css" /></head>
+  <body>
+    <div class="main">
+      <nav class="navigation">
+        <a href="/">hunter_notes</a>
+      </nav>
+      <article>
+        <header>
+          <h1 class="article-title">深度学习框架 - pytorch-torchdynamo原理分析1</h1>
+          <div class="article-info">
+            <div>
+              <span
+                >Created At：<time datetime="1717167024854"
+                  >2024-05-31 22:50</time
+                ></span
+              >
+              <span
+                >Updated At：<time datetime="1720963849151"
+                  >2024-07-14 21:30</time
+                ></span
+              >
+            </div>
+            
+          </div>
+        </header>
+        <div class="article-content markdown-body"><h2 id="pytorch">pytorch</h2>
+<p>源码编译：</p>
+<div><pre class="hljs"><code><span class="hljs-built_in">export</span> <span class="hljs-attribute">USE_CUDA</span>=0
+python3 setup.py develop</code></pre></div>
+<h2 id="torchdynamo原理">torch.Dynamo原理</h2>
+<div><pre class="hljs"><code><span class="hljs-variable">@startmindmap</span>
+* torchDynamo原理
+** 如何追踪TorchDynamo执行
+** torch.optimize是如何调用torchDynamo
+*** 装饰器调用eval_frame
+** torchDynamo中做了什么
+*** 从eval_frame到convert_frame
+*** convert_frame中Instruction转换
+**** Instruction转换是如何构建torch.<span class="hljs-attribute">Fx</span>:通过SymbolicTrace
+** torchDynamo是如何调用后端优化函数的
+<span class="hljs-variable">@endmindmap</span></code></pre></div>
+<h3 id="调试方法">调试方法</h3>
+<p>配置环境变量：</p>
+<ul>
+<li><code>export PYTHONPATH=$HOME/project/torch-runtime/pytorch:$PYTHONPATH</code>：使用本地torch代码</li>
+<li><code>export TORCH_LOGS="+dynamo,guards,bytecode"</code>：使能dynamo日志</li>
+</ul>
+<h3 id="分析">分析</h3>
+<h4 id="torchoptimize装饰器">torch.optimize装饰器</h4>
+<p>示例程序：</p>
+<div><pre class="hljs"><code><span class="hljs-keyword">from</span> typing <span class="hljs-keyword">import</span> <span class="hljs-type">List</span>
+<span class="hljs-keyword">import</span> torch
+<span class="hljs-keyword">from</span> torch <span class="hljs-keyword">import</span> _dynamo <span class="hljs-keyword">as</span> torchdynamo
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">my_compiler</span>(<span class="hljs-params">gm: torch.fx.GraphModule, example_inputs: <span class="hljs-type">List</span>[torch.Tensor]</span>):
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">"my_compiler() called with FX graph:"</span>)
+    gm.graph.print_tabular()
+    <span class="hljs-keyword">return</span> gm.forward  <span class="hljs-comment"># return a python callable</span>
+
+<span class="hljs-meta">@torchdynamo.optimize(<span class="hljs-params">my_compiler</span>)</span>
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">toy_example</span>(<span class="hljs-params">a, b</span>):
+    x = a / (torch.<span class="hljs-built_in">abs</span>(a) + <span class="hljs-number">1</span>)
+    <span class="hljs-keyword">if</span> b.<span class="hljs-built_in">sum</span>() &lt; <span class="hljs-number">0</span>:
+        b = b * -<span class="hljs-number">1</span>
+    <span class="hljs-keyword">return</span> x * b
+<span class="hljs-keyword">for</span> _ <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">100</span>):
+    toy_example(torch.randn(<span class="hljs-number">10</span>), torch.randn(<span class="hljs-number">10</span>))</code></pre></div>
+<p>装饰器<code>torchdynamo.optimize</code>是在<code>_TorchDynamoContext</code>中实现的，在<code>__enter__</code>函数中通过<code>set_eval_frame()</code>将python解释器中<code>eval_frame</code>行为替换成了<code>convert_frame._convert_frame</code>中定制的行为。</p>
+<p>此处<code>set_eval_frame()</code>实际调用了<code>torch/csrc/dynamo/eval_frame.c</code>中的对应函数，利用PEP523提案，修改了解释其方法：</p>
+<div><pre class="hljs"><code><span class="hljs-function"><span class="hljs-keyword">static</span> PyObject* <span class="hljs-title">set_eval_frame</span><span class="hljs-params">(PyObject* new_callback, PyThreadState* tstate)</span> </span>{
+  <span class="hljs-comment">// Change the eval frame callback and return the old one</span>
+  <span class="hljs-comment">//  - None: disables TorchDynamo</span>
+  <span class="hljs-comment">//  - False: run-only mode (reuse existing compiles)</span>
+  <span class="hljs-comment">//  - Python callable(): enables TorchDynamo</span>
+  PyObject* old_callback = <span class="hljs-built_in">eval_frame_callback_get</span>();
+
+  <span class="hljs-comment">// owned by caller</span>
+  <span class="hljs-built_in">Py_INCREF</span>(old_callback);
+
+  <span class="hljs-keyword">if</span> (old_callback != Py_None &amp;&amp; new_callback == Py_None) {
+    <span class="hljs-built_in">decrement_working_threads</span>(tstate);
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (old_callback == Py_None &amp;&amp; new_callback != Py_None) {
+    <span class="hljs-built_in">increment_working_threads</span>(tstate);
+  }
+
+  <span class="hljs-built_in">Py_INCREF</span>(new_callback);
+  <span class="hljs-built_in">Py_DECREF</span>(old_callback);
+
+  <span class="hljs-comment">// Set thread local callback. This will drive behavior of our shim, if/when it</span>
+  <span class="hljs-comment">// is installed.</span>
+  <span class="hljs-built_in">eval_frame_callback_set</span>(new_callback);
+
+  <span class="hljs-keyword">return</span> old_callback;
+}</code></pre></div>
+<h4 id="evalframe机制">EvalFrame机制</h4>
+<p>调用<code>torch.optimize</code>时，发生如下调用链：<code>optimize</code> --&gt; <code>_optimize_catch_errors(convert_frame.convert_frame(backend))</code> --&gt; <code>OptimizeContext</code> --&gt; <code>TorchDynamoContext</code>，效果是将python中<code>eval_frame</code>操作改为定制的callback函数<code>convert_frame._convert_frame</code>。在<code>convert_frame</code>中发生了什么？</p>
+<p>torchdynamo官方的示意图：<br />
+<img src="/_resources/3de13824e0aa4caa8328a8374162f31f.png" /></p>
+<p>从<code>convert_frame</code>开始将frame转换为一个FX Graph，转换过程通过模拟字节码执行实现，模拟实现的逻辑通过调用<code>pytorch/torch/_dynamo/symbolic_convert.py</code>中<code>InstructionTranslator</code>实现。</p>
+<p>示例代码对应的字节码如下：<br />
+<img src="/_resources/426386a788af4ed6ad597571329bca5f.png" /></p>
+<h4 id="字节码如何变换">字节码如何变换</h4>
+<p>问题： torchdynamo是如何调用到fx图优化的：torch/fx/experimental/symbolic_shapes.py:2320</p>
+<ul>
+<li>通过<code>torch/_dynamo/convert_frame.py</code>中<code>InstructionTranslator</code>进行转换</li>
+</ul>
+<div><pre class="hljs"><code>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">transform</span>(<span class="hljs-params">instructions, code_options</span>):
+        <span class="hljs-keyword">nonlocal</span> output
+        <span class="hljs-keyword">nonlocal</span> tracer
+        speculation_log.restart()
+        tracer = InstructionTranslator(
+            instructions,
+            code,
+            <span class="hljs-built_in">locals</span>,
+            <span class="hljs-built_in">globals</span>,
+            builtins,
+            code_options,
+            compiler_fn,
+            one_graph,
+            export,
+            export_constraints,
+            mutated_closure_cell_contents,
+            frame_state=frame_state,
+            speculation_log=speculation_log,
+        )
+
+        <span class="hljs-keyword">try</span>:
+            <span class="hljs-keyword">with</span> tracing(tracer.output.tracing_context), tracer.set_current_tx():
+                tracer.run()
+        <span class="hljs-keyword">except</span> exc.UnspecializeRestartAnalysis:
+            speculation_log.clear()
+            <span class="hljs-keyword">raise</span>
+        <span class="hljs-keyword">except</span> (exc.SpeculationRestartAnalysis, exc.SkipFrame):
+            <span class="hljs-keyword">raise</span>
+        <span class="hljs-keyword">except</span> Exception:
+            <span class="hljs-keyword">if</span> translation_validation_enabled():
+                bisect(tracer.output.shape_env)
+            <span class="hljs-keyword">raise</span>
+        <span class="hljs-keyword">finally</span>:
+            tracer.output.call_cleanup_hooks()
+
+        output = tracer.output
+        <span class="hljs-keyword">assert</span> output <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span>
+        <span class="hljs-keyword">assert</span> output.output_instructions
+        instructions[:] = output.output_instructions
+        code_options.update(output.code_options)</code></pre></div>
+<p>模拟执行基于<code>InstructionTranslator</code>类实现，其中<code>step</code>函数完成逐字节码的执行：</p>
+<div><pre class="hljs"><code><span class="hljs-keyword">def</span> <span class="hljs-title function_">step</span>():
+             <span class="hljs-comment"># ...</span>
+             <span class="hljs-keyword">try</span>:
+            self.dispatch_table[inst.opcode](self, inst)
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">not</span> self.output.should_exit
+        <span class="hljs-keyword">except</span> ReturnValueOp:
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">False</span>
+        <span class="hljs-keyword">except</span> Unsupported:
+            <span class="hljs-keyword">if</span> self.current_speculation <span class="hljs-keyword">is</span> <span class="hljs-literal">None</span>:
+                log.debug(<span class="hljs-string">"empty checkpoint"</span>)
+                <span class="hljs-keyword">raise</span>
+            log.debug(<span class="hljs-string">"step triggered compile"</span>, exc_info=<span class="hljs-literal">True</span>)</code></pre></div>
+<p>根据指令的<code>opcode</code>，分发到dispatch_table具体函数中实现，比如<code>LOAD_FAST</code>字节码：</p>
+<div><pre class="hljs"><code>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">LOAD_FAST</span>(<span class="hljs-params">self, inst</span>):
+        name = inst.argval
+
+        <span class="hljs-keyword">if</span> self.exec_recorder <span class="hljs-keyword">and</span> name <span class="hljs-keyword">in</span> self.f_locals:
+            self.exec_recorder.add_local_var(name, self.f_locals[name])
+
+        <span class="hljs-keyword">try</span>:
+            self.push(self.symbolic_locals[name].unwrap())
+        <span class="hljs-keyword">except</span> KeyError:
+            <span class="hljs-keyword">if</span> name.startswith(<span class="hljs-string">"."</span>):
+                <span class="hljs-keyword">try</span>:
+                    <span class="hljs-comment"># This happens in dict/list comprehensions</span>
+                    self.push(self.symbolic_locals[name.replace(<span class="hljs-string">"."</span>, <span class="hljs-string">"implicit"</span>)])
+                <span class="hljs-keyword">except</span> KeyError:
+                    unimplemented(<span class="hljs-string">"undefined LOAD_FAST (implicit)"</span>)
+            <span class="hljs-keyword">else</span>:
+                unimplemented(<span class="hljs-string">"undefined LOAD_FAST"</span>)
+
+        <span class="hljs-comment"># for continuation functions</span>
+        <span class="hljs-keyword">if</span> name.startswith(<span class="hljs-string">"___stack"</span>):
+            self.symbolic_locals.pop(name)</code></pre></div>
+<h4 id="fxgraph如何被构建">fx.Graph如何被构建</h4>
+<ul>
+<li>[ x ] VariableTracker是如何构建fx.Graph的？</li>
+</ul>
+<p>在字节码模拟执行过程中，<code>LOAD_FAST</code>将对应变量Push到栈上，被Push的变量类型是<code>VariableTracker</code>；<code>VariableTracker</code>管理了<code>guard</code>相关信息。同样的<code>LOAD_GLOBAL</code>也会构建对应的<code>VariableTracker</code>：</p>
+<div><pre class="hljs"><code>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">LOAD_GLOBAL</span>(<span class="hljs-params">self, inst</span>):
+        <span class="hljs-keyword">if</span> self.output.global_scope <span class="hljs-keyword">is</span> self.f_globals:
+            <span class="hljs-built_in">super</span>().LOAD_GLOBAL(inst)
+        <span class="hljs-keyword">else</span>:
+            <span class="hljs-keyword">if</span> sys.version_info &gt;= (<span class="hljs-number">3</span>, <span class="hljs-number">11</span>):
+                <span class="hljs-keyword">if</span> inst.arg % <span class="hljs-number">2</span>:
+                    self.PUSH_NULL(inst)
+
+            name = inst.argval
+            <span class="hljs-keyword">if</span> inst.argval == <span class="hljs-string">"AssertionError"</span>:
+                unimplemented(<span class="hljs-string">"assert with non-string message"</span>)
+
+            _, fglobals_vt, global_source = self.get_globals_source_and_value(name)
+            <span class="hljs-keyword">if</span> self.output.side_effects.has_pending_mutation_of_attr(fglobals_vt, name):
+                self.push(self.output.side_effects.load_attr(fglobals_vt, name))
+            <span class="hljs-keyword">else</span>:
+                <span class="hljs-keyword">try</span>:
+                    value = self.f_globals[name]
+                <span class="hljs-keyword">except</span> KeyError:
+                    <span class="hljs-keyword">return</span> self.load_builtin(inst)
+
+                self.push(VariableBuilder(self, global_source)(value))
+</code></pre></div>
+<p>在<code>VariableBuilder</code>被调用时，会进入包装过程，将Python value包装成对应的Tracker：</p>
+<div><pre class="hljs"><code>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__call__</span>(<span class="hljs-params">self, value</span>):
+        <span class="hljs-keyword">if</span> value <span class="hljs-keyword">in</span> self.tx.output.side_effects:
+            side_effect_result = self.tx.output.side_effects[value]
+            dup_guard = make_dupe_guard(self.source, side_effect_result.source)
+            <span class="hljs-keyword">if</span> dup_guard:
+                self.install_guards(dup_guard)
+            <span class="hljs-keyword">return</span> side_effect_result
+
+        cached_vt = self.tx.output.variable_tracker_cache.lookup(value, self.source)
+        <span class="hljs-keyword">if</span> cached_vt:
+            <span class="hljs-keyword">return</span> cached_vt
+
+        vt = self._wrap(value)
+        vt.source = self.source
+        <span class="hljs-keyword">if</span> self._can_lift_attrs_to_inputs(vt):
+            vt = self.tx.output.side_effects.track_object_existing(value, vt)
+
+        self.tx.output.variable_tracker_cache.add(value, self.source, vt)
+        <span class="hljs-keyword">return</span> vt</code></pre></div>
+<p>具体包装过程在<code>self._wrap</code>中，会完成<code>install_guard</code>和<code>fx.graph</code>构建行为。</p>
+<p>具体而言，<code>torch.fx.Graph</code>的构建是通过<code>Tracer</code>来实现的，而Tracer保存在<code>Class Outgraph</code>中。模拟执行过程中，所有变量都被包装到了<code>VariableTracker</code>中；<code>VariableTracker</code>通过<code>VariableBuilder</code>构建，在<code>__call__</code>方法中会将python value包装为<code>VariableTracker</code>; 而<code>OutputGraph</code>是<code>torch.fx.Tracer</code>的一个子类，pytorch中<code>torch.fx.Graph</code>中间表示通过Tracer构建；在<code>VariableBuilder</code>过程中，会通过<code>tx.Tracer</code>返回对应的<code>Proxy</code>，从而构建<code>fx.Graph</code>，同时也会为对应的节点<code>install_guard</code>。</p>
+<h2 id="参考资料">参考资料</h2>
+<h3 id="相关链接">相关链接</h3>
+<ul>
+<li>torch_dynamo分析：<a title="https://nyakku.moe/posts/2023/04/22/decomposing-torch-dynamo.html" href="https://nyakku.moe/posts/2023/04/22/decomposing-torch-dynamo.html">https://nyakku.moe/posts/2023/04/22/decomposing-torch-dynamo.html</a></li>
+<li>torch_dynamo分析2：<a title="https://fkong.tech/posts/2023-05-14-dynamo-02/" href="https://fkong.tech/posts/2023-05-14-dynamo-02/">https://fkong.tech/posts/2023-05-14-dynamo-02/</a></li>
+<li>torch_fx文档：<a title="https://pytorch.org/docs/stable/fx.html" href="https://pytorch.org/docs/stable/fx.html">https://pytorch.org/docs/stable/fx.html</a></li>
+<li>torch_dynamo文档：<a title="https://pytorch.org/docs/stable/torch.compiler_deepdive.html" href="https://pytorch.org/docs/stable/torch.compiler_deepdive.html">https://pytorch.org/docs/stable/torch.compiler_deepdive.html</a></li>
+<li>guards文档：<a title="https://pytorch.org/docs/stable/torch.compiler_guards_overview.html#variables" href="https://pytorch.org/docs/stable/torch.compiler_guards_overview.html#variables">https://pytorch.org/docs/stable/torch.compiler_guards_overview.html#variables</a></li>
+</ul>
+<h3 id="调用栈">调用栈</h3>
+<p>源码分析：</p>
+<ul>
+<li><code>PyCodeObject</code>定义：<code>/usr/include/python3.10/cpython/code.h</code></li>
+<li><code>PyFrameObject</code>定义：<code>/usr/include/python3.10/cpython/frameobject.h</code></li>
+<li><code>set_eval_frame</code>：<code>eval_frame.c</code>中定义，<code>eval_frame.py</code>中调用</li>
+<li>编译入口：<code>"torch/_dynamo/convert_frame.py"</code> 中<code>_compile</code>函数</li>
+<li>字节码变换：<code>torch/_dynamo/bytecode_transformation.py</code>中<code>transform_code_object</code>
+<ul>
+<li>调用<code>pytorch/torch/_dynamo/symbolic_convert.py</code>中<code>InstructionTranslator</code>进行字节码转换</li>
+</ul>
+</li>
+</ul>
+<p>python调用栈：</p>
+<div><pre class="hljs"><code>  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/pytorch/</span>ht_test/test_dynamo.py(<span class="hljs-number">18</span>)&lt;module&gt;()
+-&gt; toy_example(torch.randn(<span class="hljs-number">10</span>), torch.randn(<span class="hljs-number">10</span>))
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/eval_frame.py(<span class="hljs-number">408</span>)_fn()
+-&gt; <span class="hljs-keyword">return</span> fn(*args, **kwargs)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/eval_frame.py(<span class="hljs-number">569</span>)catch_errors()
+-&gt; <span class="hljs-keyword">return</span> callback(frame, cache_entry, hooks, frame_state)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/convert_frame.py(<span class="hljs-number">671</span>)_convert_frame()
+-&gt; result = inner_convert(frame, cache_entry, hooks, frame_state)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/convert_frame.py(<span class="hljs-number">377</span>)_convert_frame_assert()
+-&gt; <span class="hljs-keyword">return</span> _compile(
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/convert_frame.py(<span class="hljs-number">595</span>)_compile()
+-&gt; guarded_code = compile_inner(code, one_graph, hooks, transform)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/utils.py(<span class="hljs-number">245</span>)time_wrapper()
+-&gt; r = func(*args, **kwargs)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/convert_frame.py(<span class="hljs-number">512</span>)compile_inner()
+-&gt; out_code = transform_code_object(code, transform)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/bytecode_transformation.py(<span class="hljs-number">1033</span>)transform_code_object()
+-&gt; transformations(instructions, code_options)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/convert_frame.py(<span class="hljs-number">150</span>)_fn()
+-&gt; <span class="hljs-keyword">return</span> fn(*args, **kwargs)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/convert_frame.py(<span class="hljs-number">477</span>)transform()
+-&gt; tracer.run()
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/symbolic_convert.py(<span class="hljs-number">2101</span>)run()
+-&gt; <span class="hljs-keyword">super</span>().run()
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/symbolic_convert.py(<span class="hljs-number">815</span>)run()
+-&gt; and self.<span class="hljs-keyword">step</span>()
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/symbolic_convert.py(<span class="hljs-number">778</span>)<span class="hljs-keyword">step</span>()
+-&gt; getattr(self, inst.opname)(inst)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/symbolic_convert.py(<span class="hljs-number">386</span>)inner()
+-&gt; self.output.compile_subgraph(
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/output_graph.py(<span class="hljs-number">879</span>)compile_subgraph()
+-&gt; self.compile_and_call_fx_graph(tx, list(reversed(stack_values)), root)
+  <span class="hljs-regexp">/usr/</span>lib<span class="hljs-regexp">/python3.10/</span>contextlib.py(<span class="hljs-number">79</span>)inner()
+-&gt; <span class="hljs-keyword">return</span> func(*args, **kwds)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/output_graph.py(<span class="hljs-number">1024</span>)compile_and_call_fx_graph()
+-&gt; compiled_fn = self.call_user_compiler(gm)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/utils.py(<span class="hljs-number">245</span>)time_wrapper()
+-&gt; r = func(*args, **kwargs)
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo/output_graph.py(<span class="hljs-number">1077</span>)call_user_compiler()
+-&gt; compiled_fn = compiler_fn(gm, self.example_inputs())
+  <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/torch_venv/</span>lib<span class="hljs-regexp">/python3.10/</span>site-packages<span class="hljs-regexp">/torch/</span>_dynamo<span class="hljs-regexp">/repro/</span>after_dynamo.py(<span class="hljs-number">117</span>)debug_wrapper()
+-&gt; compiled_gm = compiler_fn(gm, example_inputs)
+&gt; <span class="hljs-regexp">/home/</span>hunter<span class="hljs-regexp">/project/</span>torch-<span class="hljs-keyword">runtime</span><span class="hljs-regexp">/pytorch/</span>ht_test/test_dynamo.py(<span class="hljs-number">7</span>)my_compiler()
+-&gt; <span class="hljs-keyword">print</span>(<span class="hljs-string">"my_compiler() called with FX graph:"</span>)</code></pre></div>
+</div>
+      </article>
+    </div>
+  </body>
+</html>
