@@ -88,7 +88,7 @@ q, k ,v  = self.c_attn(x).split(self.n_embd, dim=<span class="hljs-number">2</sp
 <p>Q、K、V向量计算如下图所示：<br />
 <img src="/_resources/76dea313b7d7426590fe1a5a81cbddf8.png" /></p>
 <ul>
-<li class="md-checkbox joplin-checkbox"><div class="checkbox-wrapper"><input type="checkbox" id="md-checkbox-0" checked="checked" /><label id="cb-label-md-checkbox-0" for="md-checkbox-0" class="checkbox-label-checked">@TODO: Q,K,V矩阵的列参数如何确定？</label></div></li>
+<li class="md-checkbox joplin-checkbox"><div class="checkbox-wrapper"><input type="checkbox" id="md-checkbox-3" checked="checked" /><label id="cb-label-md-checkbox-3" for="md-checkbox-3" class="checkbox-label-checked">@TODO: Q,K,V矩阵的列参数如何确定？</label></div></li>
 </ul>
 <p>NormalizedInputEmbedding矩阵分别和Q、K、V对应的权重矩阵相乘，生成对应的Q，K，V向量。在Pytorch中Q、K、V权重矩阵被合并到了一个线性层（self.c_atten）;此外，MutiHead的权重也被合并在了一起。上图中仅表示一个Head的计算，因此，权重矩阵（Q、K、V Weights）中行维度（A）为词嵌入矩阵的特征C/nHead（demo模型中对应48 / 3 = 16）。对应的权重矩阵也是在训练过程中通过反向传播得到，在推理过程中直接使用。</p>
 <h5 id="自注意力机制">自注意力机制</h5>
