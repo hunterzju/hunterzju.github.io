@@ -4,7 +4,7 @@
         <title></title>
         <link>undefined</link>
         <description>undefined</description>
-        <lastBuildDate>Sun, 18 Aug 2024 12:31:00 GMT</lastBuildDate>
+        <lastBuildDate>Sun, 18 Aug 2024 13:03:50 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>Joplin Pages Publisher</generator>
         <item>
@@ -40,7 +40,7 @@
 <span class="hljs-meta">#  <span class="hljs-keyword">define</span> DISPATCH_GOTO() goto dispatch_opcode</span></code></pre></div>
 <p>可以看出字节码结构由<code>op.code</code>和<code>op.arg</code>两部分构成，每部分8bit。</p>
 <ul>
-<li class="md-checkbox joplin-checkbox"><div class="checkbox-wrapper"><input type="checkbox" id="md-checkbox-2" /><label id="cb-label-md-checkbox-2" for="md-checkbox-2" class="checkbox-label-unchecked">TODO:意味着python字节码最多只有256个？但是opcode中编码是大于256的。</label></div></li>
+<li class="md-checkbox joplin-checkbox"><div class="checkbox-wrapper"><input type="checkbox" id="md-checkbox-0" /><label id="cb-label-md-checkbox-0" for="md-checkbox-0" class="checkbox-label-unchecked">TODO:意味着python字节码最多只有256个？但是opcode中编码是大于256的。</label></div></li>
 </ul>
 <h2 id="字节码执行">字节码执行</h2>
 <p>知道了字节码结构，python执行时如何处理对应的字节码呢？运行时的处理逻辑在<code>Python/ceval.c</code>的<code>_PyEval_EvalFrameDefault</code>函数中，根据其中的dispatch逻辑，字节码的具体处理逻辑在<code>Python-3.12.4/Python/generated_cases.c.h</code>中，以<code>LOAD_FAST</code>字节码为例，其实现如下：</p>
@@ -56,6 +56,14 @@
             DISPATCH();
         }</code></pre></div>
 <p>其具体逻辑是根据<code>oparg</code>从localvar中取具体的值，同时增加对应值的引用计数；然后扩充栈空间，并将取出的值放到栈顶，之后再出发dispatch逻辑取下一条字节码执行。</p>
+<p>至此，如何看懂<code>dis</code>模块所对应的字节码已经显而易见了，比如对于如下python代码：</p>
+<div><pre class="hljs"><code><span class="hljs-keyword">def</span> <span class="hljs-title function_">toy_example</span>(<span class="hljs-params">a, b</span>):
+    x = a / (torch.<span class="hljs-built_in">abs</span>(a) + <span class="hljs-number">1</span>)
+    <span class="hljs-keyword">if</span> b.<span class="hljs-built_in">sum</span>() &lt; <span class="hljs-number">0</span>:
+        b = b * -<span class="hljs-number">1</span>
+    <span class="hljs-keyword">return</span> x * b</code></pre></div>
+<p>其字节码表示如下：<br />
+<img src="/_resources/33261707afbd41a592ec71d12fa6c51a.png" /></p>
 ]]></content:encoded>
         </item>
         <item>
@@ -1114,7 +1122,7 @@ q, k ,v  = self.c_attn(x).split(self.n_embd, dim=<span class="hljs-number">2</sp
 <p>Q、K、V向量计算如下图所示：<br />
 <img src="/_resources/76dea313b7d7426590fe1a5a81cbddf8.png" /></p>
 <ul>
-<li class="md-checkbox joplin-checkbox"><div class="checkbox-wrapper"><input type="checkbox" id="md-checkbox-3" checked="checked" /><label id="cb-label-md-checkbox-3" for="md-checkbox-3" class="checkbox-label-checked">@TODO: Q,K,V矩阵的列参数如何确定？</label></div></li>
+<li class="md-checkbox joplin-checkbox"><div class="checkbox-wrapper"><input type="checkbox" id="md-checkbox-1" checked="checked" /><label id="cb-label-md-checkbox-1" for="md-checkbox-1" class="checkbox-label-checked">@TODO: Q,K,V矩阵的列参数如何确定？</label></div></li>
 </ul>
 <p>NormalizedInputEmbedding矩阵分别和Q、K、V对应的权重矩阵相乘，生成对应的Q，K，V向量。在Pytorch中Q、K、V权重矩阵被合并到了一个线性层（self.c_atten）;此外，MutiHead的权重也被合并在了一起。上图中仅表示一个Head的计算，因此，权重矩阵（Q、K、V Weights）中行维度（A）为词嵌入矩阵的特征C/nHead（demo模型中对应48 / 3 = 16）。对应的权重矩阵也是在训练过程中通过反向传播得到，在推理过程中直接使用。</p>
 <h5 id="自注意力机制">自注意力机制</h5>
