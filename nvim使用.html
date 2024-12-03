@@ -3,11 +3,11 @@
   <head>
   <meta charset="UTF-8">
 
-  <link rel="canonical" href="/obsidian%E6%90%AD%E5%BB%BA%E4%B8%AA%E4%BA%BA%E7%9F%A5%E8%AF%86%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F" />
+  <link rel="canonical" href="/nvim%E4%BD%BF%E7%94%A8" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <meta name="description" content="自建同步服务 - livesync开源自建同步服务方案：https://github.com/vrtmrz/obsidian-livesync/blob/main/README_cn.md">
+  <meta name="description" content="nvchad图标显示失败：export LANG=zh_CN.utf8">
 
   <meta property="og:site_name" content="Digital garden of hunterzju">
 
@@ -16,11 +16,11 @@
   <link rel="stylesheet" href="/styles.css">
 
   
-  <meta property="og:description" content="自建同步服务 - livesync开源自建同步服务方案：https://github.com/vrtmrz/obsidian-livesync/blob/main/README_cn.md"/>
+  <meta property="og:description" content="nvchad图标显示失败：export LANG=zh_CN.utf8"/>
   
 
   
-  <meta property="og:title" content="Obsidian搭建个人知识管理系统">
+  <meta property="og:title" content="Nvim使用">
   <meta property="og:type" content="article">
   
 
@@ -29,13 +29,13 @@
   <meta property="article:author" content="/">
   
 
-  <meta property="og:url" content="/obsidian%E6%90%AD%E5%BB%BA%E4%B8%AA%E4%BA%BA%E7%9F%A5%E8%AF%86%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F" />
+  <meta property="og:url" content="/nvim%E4%BD%BF%E7%94%A8" />
 
   
 
   <title>
     
-      Obsidian搭建个人知识管理系统 &mdash; Digital garden of hunterzju
+      Nvim使用 &mdash; Digital garden of hunterzju
     
   </title>
 </head>
@@ -48,7 +48,7 @@
     <div class="wrapper">
       <main><article>
   <div>
-    <h1>Obsidian搭建个人知识管理系统</h1>
+    <h1>Nvim使用</h1>
     <time datetime="2024-12-03T15:41:26+00:00">
       Last updated on December 3, 2024
       
@@ -57,47 +57,25 @@
 
   <div id="notes-entry-container">
     <content>
-      <h2 id="自建同步服务---livesync">自建同步服务 - livesync</h2>
-<p>开源自建同步服务方案：
-https://github.com/vrtmrz/obsidian-livesync/blob/main/README_cn.md</p>
+      <h2 id="nvchad">nvchad</h2>
+<p>图标显示失败：<code class="language-plaintext highlighter-rouge">export LANG=zh_CN.utf8</code></p>
 
-<h3 id="couchdb">Couchdb</h3>
-<p>CouchDB是一种开源的NoSQL数据库，专门设计用于存储和管理JSON文档。它的主要特点是使用RESTful API进行操作，支持高并发访问和分布式数据存储。CouchDB非常适合用于需要高可用性和数据冗余的应用程序，例如移动应用和Web应用。</p>
+<h2 id="nvim配置项目相关设置">nvim配置项目相关设置</h2>
+<p>方案1：
+配置中开启exrc，然后在项目中配置<code class="language-plaintext highlighter-rouge">.nvim.lua</code>文件</p>
 
-<p>配置Couchdb参考文档：
-https://github.com/vrtmrz/obsidian-livesync/blob/main/docs/setup_own_server_cn.md</p>
+<p>方案2：
+exrc-nvim https://muniftanjim.dev/blog/neovim-project-local-config-with-exrc-nvim/</p>
 
-<p>使用docker配置Couchdb：
-https://github.com/vrtmrz/self-hosted-livesync-server</p>
+<h2 id="nvim-lspconfig配置">nvim-lspconfig配置</h2>
 
-<h3 id="caddy服务器添加ssl功能">Caddy服务器添加SSL功能</h3>
-<p>移动端访问需要https协议，需要一个ssl证书; Caddy可以比较方便地维护ssl证书。
-使用docker配置，需要主要云服务器开放80和443端口，Caddy需要使用。</p>
+<p>clangd配置：https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#clangd</p>
 
-<h2 id="域名解析">域名解析</h2>
-<p>域名解析添加A记录或者AAAA记录到服务商的域名解析服务就可以。</p>
+<h2 id="nvim-dap使用">nvim-dap使用</h2>
+<p><a href="../%E5%B7%A5%E5%85%B7/nvim-dap%E4%BD%BF%E7%94%A8.md" target="_blank">nvim-dap使用</a></p>
 
-<h2 id="代理插件">代理插件</h2>
-<p>obsidian有时访问不了插件市场，需要挂代理，使用如下插件：
-https://github.com/windingblack/obsidian-global-proxy/releases/tag/1.0.4</p>
-
-<h2 id="github备份">github备份</h2>
-<p>将笔记备份到github，使用插件：
-https://github.com/kevinmkchin/Obsidian-GitHub-Sync</p>
-
-<h2 id="文章发布">文章发布</h2>
-<p>obsidian论坛相关讨论：
-https://forum-zh.obsidian.md/t/topic/8852</p>
-
-<p>obsidian发布插件：
-https://github.com/Enveloppe/obsidian-enveloppe</p>
-
-<p>github pages模板：
- https://github.com/maximevaillancourt/digital-garden-jekyll-template</p>
-
-<p>netlify部署示例：
-https://maximevaillancourt.com/blog/setting-up-your-own-digital-garden-with-jekyll</p>
-
+<p>nvim内置函数：
+https://neovim.io/doc/user/builtin.html</p>
 
       <p>This line appears after every note.</p>
     </content>
