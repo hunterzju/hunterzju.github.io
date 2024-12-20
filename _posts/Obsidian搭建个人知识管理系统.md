@@ -1,9 +1,10 @@
 ---
-share: true
 title: Obsidian搭建个人知识管理系统
 date: 2024-12-21 00:25:04
 categories: "[tools, publish]"
-tags: []
+tags:
+  - obsidian-publish
+share: true
 ---
 
 ## 自建同步服务 - livesync
