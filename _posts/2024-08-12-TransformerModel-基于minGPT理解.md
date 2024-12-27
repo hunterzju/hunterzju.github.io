@@ -16,7 +16,7 @@ minGPT项目中实现了多种GPT模型（包括GPT2的多个版本），其中�
 
 Transformer论文中，模型结构分为编码器和解码器（下图左侧为编码器，右侧为解码器）；编码器和解码器中有N个结构相似的Block，很多代码实现中称为GLMBlock；GLMBlock中核心结构是Multi-Head的SelfAttention机制。此外，Transformer模型并不一定要同时具有编码器和解码器，二者可以独立使用。GPT模型中主要使用解码器。
 
-![0222b0cde2a7c858d7037f4ac75b54b0.png](./0222b0cde2a7c858d7037f4ac75b54b0.png)
+![0222b0cde2a7c858d7037f4ac75b54b0.png](../assets/posts/0222b0cde2a7c858d7037f4ac75b54b0.png)
 
 
 
@@ -51,17 +51,17 @@ wpe = nn.Embedding(config.block_size, config.n_embd)
 
 其中，词嵌入算子`wte`中`config.vocab_size`代表模型所能识别单词表的维度，在字符串排序的nanoGPT模型（下文简称demo模型）中，词表中只有A-C，对应参数为3（下图中矩阵维度n_vocab）；`config.n_embed`代表词嵌入矩阵的特征维度，在demo模型中u对应值为48（下图中矩阵维度C）。
 
-![0eb5844ce83f7bd9b44adef3881497b6.png](./0eb5844ce83f7bd9b44adef3881497b6.png)
+![0eb5844ce83f7bd9b44adef3881497b6.png](../assets/posts/0eb5844ce83f7bd9b44adef3881497b6.png)
 
 位置编码算子`wpe`中`config.block_size`代表模型所能接收的最大输入长度，demo模型中对应值为`2 * input_len - 1 = 11`（下图中矩阵维度T）。
 
-![4241f71eac4a860abaa84474d280ce05.png](./4241f71eac4a860abaa84474d280ce05.png)
+![4241f71eac4a860abaa84474d280ce05.png](../assets/posts/4241f71eac4a860abaa84474d280ce05.png)
 
 上述两个矩阵的值都是在训练过程中生成的，推理过程中作为权重使用。
 
 Embedding层的计算过程就是根据输入token的index和位置，将两个矩阵中的对应列相加：在demo模型中t=3时刻输入token为B，对应Token Embed矩阵中第1列（下标从0开始），对应Position Embed矩阵中第3列（下标从0开始），两列相加作为词嵌入的结果`input embedding`，用于后续处理。
 
-![e92db2dc46fd14c19c6c64e1b2541efb.png](./e92db2dc46fd14c19c6c64e1b2541efb.png)
+![e92db2dc46fd14c19c6c64e1b2541efb.png](../assets/posts/e92db2dc46fd14c19c6c64e1b2541efb.png)
 
 
 #### LayerNormal
@@ -75,7 +75,7 @@ ln_f = nn.LayerNorm(config.n_embd)
 其中主要参数是词嵌入矩阵的特征维度`config.n_embed`，demo模型中对应值为48。
 
  具体LayerNormalize过程如下图所示：
- ![5357fd095bd52007ab1f4d52323568c2.png](./5357fd095bd52007ab1f4d52323568c2.png)
+ ![5357fd095bd52007ab1f4d52323568c2.png](../assets/posts/5357fd095bd52007ab1f4d52323568c2.png)
 
 #### SelfAttention
 注意力机制是Transformer模型的核心，GPT模型中一般有多个Head，下文主要关注单个Head的执行过程。
@@ -98,7 +98,7 @@ q, k ,v  = self.c_attn(x).split(self.n_embd, dim=2)
 ```
 
 Q、K、V向量计算如下图所示：
-![b8bb56af66a9ef2f6961512f79410b35.png](./b8bb56af66a9ef2f6961512f79410b35.png)
+![b8bb56af66a9ef2f6961512f79410b35.png](../assets/posts/b8bb56af66a9ef2f6961512f79410b35.png)
 
 - [x] @TODO: Q,K,V矩阵的列参数如何确定？
 
@@ -108,7 +108,7 @@ NormalizedInputEmbedding矩阵分别和Q、K、V对应的权重矩阵相乘，�
 
 SelfAttention的核心逻辑是让输入尽可能感知到之前的输入，其过程类似于查表：
 
-![706a34286f17a28389278da7483c0e0e.png](./706a34286f17a28389278da7483c0e0e.png)
+![706a34286f17a28389278da7483c0e0e.png](../assets/posts/706a34286f17a28389278da7483c0e0e.png)
 
 1. 将t=N时刻的Q向量与所有之前时刻的K向量做点积（计算相似度），将计算结果存入AttentionMatrix的第N行中;
 2. AttentionMatrix做SoftMax归一化处理;
@@ -157,19 +157,19 @@ def GELU(self, x):
 ```
 
 激活函数：
-![399fa79e85a9d7b3b38bca78a1510564.png](./399fa79e85a9d7b3b38bca78a1510564.png)
+![399fa79e85a9d7b3b38bca78a1510564.png](../assets/posts/399fa79e85a9d7b3b38bca78a1510564.png)
 
 mlp层最后的输出也采用了残差连接的方式。
 
 #### Transformer
 以上内容构成了Transformer模型的单个Block层，通常多个Block层连接构成具备一定功能的模型。
 
-![dd3c727101d5b6a3500fca25ede0ce3f.png](./dd3c727101d5b6a3500fca25ede0ce3f.png)
+![dd3c727101d5b6a3500fca25ede0ce3f.png](../assets/posts/dd3c727101d5b6a3500fca25ede0ce3f.png)
 
 #### Softmax
 
 softmax实际上是对输入数据取指数，然后进行归一化，计算公式如下：
-![3aaa92f5a5331b2de5f5e5ca29e39c43.png](./3aaa92f5a5331b2de5f5e5ca29e39c43.png)
+![3aaa92f5a5331b2de5f5e5ca29e39c43.png](../assets/posts/3aaa92f5a5331b2de5f5e5ca29e39c43.png)
 
 #### Output
 
